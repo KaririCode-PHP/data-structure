@@ -21,13 +21,16 @@ use KaririCode\Contract\DataStructure\Stack;
  */
 class ArrayStack implements Stack
 {
+    /** @var list<mixed> */
     private array $elements = [];
 
+    #[\Override]
     public function push(mixed $element): void
     {
         $this->elements[] = $element;
     }
 
+    #[\Override]
     public function pop(): mixed
     {
         if ($this->isEmpty()) {
@@ -37,13 +40,12 @@ class ArrayStack implements Stack
         return array_pop($this->elements);
     }
 
+    #[\Override]
     public function peek(): mixed
     {
-        if ($this->isEmpty()) {
-            return null;
-        }
+        $last = array_key_last($this->elements);
 
-        return $this->elements[count($this->elements) - 1];
+        return null === $last ? null : $this->elements[$last];
     }
 
     public function isEmpty(): bool
@@ -53,7 +55,7 @@ class ArrayStack implements Stack
 
     public function size(): int
     {
-        return count($this->elements);
+        return \count($this->elements);
     }
 
     public function clear(): void
@@ -61,6 +63,9 @@ class ArrayStack implements Stack
         $this->elements = [];
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getItems(): array
     {
         return array_reverse($this->elements);

@@ -26,6 +26,7 @@ class LinkedList implements Collection
     private ?Node $tail = null;
     private int $size = 0;
 
+    #[\Override]
     public function add(mixed $element): void
     {
         $newNode = new Node($element, $this->tail);
@@ -38,6 +39,7 @@ class LinkedList implements Collection
         ++$this->size;
     }
 
+    #[\Override]
     public function addAll(Collection $collection): void
     {
         foreach ($collection->getItems() as $element) {
@@ -45,6 +47,7 @@ class LinkedList implements Collection
         }
     }
 
+    #[\Override]
     public function remove(mixed $element): bool
     {
         $current = $this->head;
@@ -70,11 +73,13 @@ class LinkedList implements Collection
         return false;
     }
 
+    #[\Override]
     public function contains(mixed $element): bool
     {
         return null !== $this->find($element);
     }
 
+    #[\Override]
     public function find(mixed $element): ?Node
     {
         $current = $this->head;
@@ -88,6 +93,7 @@ class LinkedList implements Collection
         return null;
     }
 
+    #[\Override]
     public function clear(): void
     {
         $this->head = null;
@@ -100,6 +106,10 @@ class LinkedList implements Collection
         return 0 === $this->size;
     }
 
+    /**
+     * @return list<mixed>
+     */
+    #[\Override]
     public function getItems(): array
     {
         $items = [];
@@ -112,33 +122,36 @@ class LinkedList implements Collection
         return $items;
     }
 
+    #[\Override]
     public function size(): int
     {
         return $this->size;
     }
 
-    public function get(mixed $key): mixed
+    #[\Override]
+    public function get(mixed $index): mixed
     {
-        $node = $this->findNode($key);
+        $node = $this->findNode($index);
         if (null === $node) {
-            throw new \OutOfRangeException('Element not found for key: ' . $this->keyToString($key));
+            throw new \OutOfRangeException('Element not found for key: ' . $this->keyToString($index));
         }
 
         return $node->data;
     }
 
-    public function set(mixed $key, mixed $element): void
+    #[\Override]
+    public function set(mixed $index, mixed $element): void
     {
-        $node = $this->findNode($key);
+        $node = $this->findNode($index);
         if (null === $node) {
-            throw new \OutOfRangeException('Element not found for key: ' . $this->keyToString($key));
+            throw new \OutOfRangeException('Element not found for key: ' . $this->keyToString($index));
         }
         $node->data = $element;
     }
 
     private function findNode(mixed $key): ?Node
     {
-        if (is_int($key)) {
+        if (\is_int($key)) {
             return $this->findNodeByIndex($key);
         }
 
@@ -152,7 +165,7 @@ class LinkedList implements Collection
         }
         $current = $this->head;
         for ($i = 0; $i < $index; ++$i) {
-            $current = $current->next;
+            $current = $current?->next;
         }
 
         return $current;
@@ -173,7 +186,7 @@ class LinkedList implements Collection
 
     private function compareValues(mixed $a, mixed $b): bool
     {
-        if (is_object($a) && is_object($b)) {
+        if (\is_object($a) && \is_object($b)) {
             return $a == $b;
         }
 
@@ -182,11 +195,11 @@ class LinkedList implements Collection
 
     private function keyToString(mixed $key): string
     {
-        if (is_object($key)) {
-            return get_class($key) . '@' . spl_object_id($key);
+        if (\is_object($key)) {
+            return \get_class($key) . '@' . spl_object_id($key);
         }
 
-        return (string) $key;
+        return \is_scalar($key) || null === $key ? (string) $key : get_debug_type($key);
     }
 
     /**

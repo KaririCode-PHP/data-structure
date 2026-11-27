@@ -23,7 +23,9 @@ use KaririCode\Contract\DataStructure\Heap;
  */
 class BinaryHeap implements Heap, Countable
 {
+    /** @var array<int, mixed> */
     private array $heap;
+
     private string $type;
 
     public function __construct(string $type = 'min')
@@ -32,12 +34,14 @@ class BinaryHeap implements Heap, Countable
         $this->type = $type;
     }
 
+    #[\Override]
     public function add(mixed $element): void
     {
         $this->heap[] = $element;
         $this->heapifyUp();
     }
 
+    #[\Override]
     public function insert(int $index, mixed $element): void
     {
         // Inserting at a specific index is not typical for a binary heap
@@ -50,6 +54,7 @@ class BinaryHeap implements Heap, Countable
         $this->heapifyDown($index);
     }
 
+    #[\Override]
     public function poll(): mixed
     {
         if ($this->isEmpty()) {
@@ -67,6 +72,7 @@ class BinaryHeap implements Heap, Countable
         return $root;
     }
 
+    #[\Override]
     public function remove(mixed $element): bool
     {
         $index = array_search($element, $this->heap, true);
@@ -85,14 +91,16 @@ class BinaryHeap implements Heap, Countable
         return true;
     }
 
+    #[\Override]
     public function peek(): mixed
     {
         return $this->heap[0] ?? null;
     }
 
+    #[\Override]
     public function size(): int
     {
-        return count($this->heap);
+        return \count($this->heap);
     }
 
     public function isEmpty(): bool
@@ -102,7 +110,7 @@ class BinaryHeap implements Heap, Countable
 
     private function heapifyUp(?int $index = null): void
     {
-        $index = $index ?? $this->size() - 1;
+        $index ??= $this->size() - 1;
         while ($index > 0) {
             $parentIndex = ($index - 1) >> 1;
             if ($this->compare($this->heap[$index], $this->heap[$parentIndex])) {

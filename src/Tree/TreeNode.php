@@ -24,7 +24,7 @@ class TreeNode
         public mixed $value,
         public ?TreeNode $left = null,
         public ?TreeNode $right = null,
-        public ?TreeNode $parent = null
+        public ?TreeNode $parent = null,
     ) {
     }
 

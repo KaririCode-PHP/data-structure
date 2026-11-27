@@ -19,10 +19,13 @@ use KaririCode\Contract\DataStructure\Map;
  * @author    Walmir Silva <walmir.silva@kariricode.org>
  * @license   MIT
  *
+ * @implements \IteratorAggregate<int|string, mixed>
+ *
  * @see       https://kariricode.org/
  */
 class HashMap implements Map, IterableCollection, \IteratorAggregate
 {
+    /** @var array<int|string, mixed> */
     private array $map = [];
 
     /**
@@ -36,21 +39,21 @@ class HashMap implements Map, IterableCollection, \IteratorAggregate
      */
     private function getInternalKey(mixed $key): int|string
     {
-        if (is_object($key)) {
+        if (\is_object($key)) {
             return spl_object_hash($key);
         }
 
-        if (! is_scalar($key) && null !== $key) {
+        if (! \is_scalar($key) && null !== $key) {
             throw new \InvalidArgumentException('Invalid key type: HashMap keys must be scalar or objects.');
         }
 
         // For scalar types (int, string, bool, float) and null, PHP's implicit
         // conversion for array keys is the desired behavior.
         // This explicit conversion helps static analysis tools understand the types.
-        if (is_bool($key)) {
+        if (\is_bool($key)) {
             return (int) $key;
         }
-        if (is_float($key)) {
+        if (\is_float($key)) {
             return (int) $key;
         }
         if (null === $key) {
@@ -60,12 +63,14 @@ class HashMap implements Map, IterableCollection, \IteratorAggregate
         return $key; // The key is now guaranteed to be an int or string.
     }
 
+    #[\Override]
     public function put(mixed $key, mixed $value): void
     {
         $internalKey = $this->getInternalKey($key);
         $this->map[$internalKey] = $value;
     }
 
+    #[\Override]
     public function get(mixed $key): mixed
     {
         $internalKey = $this->getInternalKey($key);
@@ -73,13 +78,14 @@ class HashMap implements Map, IterableCollection, \IteratorAggregate
         return $this->map[$internalKey] ?? null;
     }
 
+    #[\Override]
     public function remove(mixed $key): bool
     {
         // The key conversion is done here, ensuring the type is safe.
         $internalKey = $this->getInternalKey($key);
 
         // The check is performed with the already handled key (int|string).
-        if (array_key_exists($internalKey, $this->map)) {
+        if (\array_key_exists($internalKey, $this->map)) {
             unset($this->map[$internalKey]);
 
             return true;
@@ -88,34 +94,49 @@ class HashMap implements Map, IterableCollection, \IteratorAggregate
         return false;
     }
 
+    #[\Override]
     public function containsKey(mixed $key): bool
     {
         // The key conversion is also done here.
         $internalKey = $this->getInternalKey($key);
 
-        return array_key_exists($internalKey, $this->map);
+        return \array_key_exists($internalKey, $this->map);
     }
 
+    #[\Override]
     public function size(): int
     {
-        return count($this->map);
+        return \count($this->map);
     }
 
+    #[\Override]
     public function clear(): void
     {
         $this->map = [];
     }
 
+    /**
+     * @return list<int|string>
+     */
+    #[\Override]
     public function keys(): array
     {
         return array_keys($this->map);
     }
 
+    /**
+     * @return list<mixed>
+     */
+    #[\Override]
     public function values(): array
     {
         return array_values($this->map);
     }
 
+    /**
+     * @return \Iterator<int|string, mixed>
+     */
+    #[\Override]
     public function getIterator(): \Iterator
     {
         return new \ArrayIterator($this->map);

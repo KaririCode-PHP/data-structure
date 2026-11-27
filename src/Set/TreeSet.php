@@ -32,6 +32,7 @@ class TreeSet implements Set, \IteratorAggregate
         $this->map = new TreeMap();
     }
 
+    #[\Override]
     public function add(mixed $element): void
     {
         if (null === $this->map->get($element)) {
@@ -39,16 +40,19 @@ class TreeSet implements Set, \IteratorAggregate
         }
     }
 
+    #[\Override]
     public function remove(mixed $element): bool
     {
         return $this->map->remove($element);
     }
 
+    #[\Override]
     public function clear(): void
     {
         $this->map = new TreeMap();
     }
 
+    #[\Override]
     public function contains(mixed $element): bool
     {
         return null !== $this->map->get($element);
@@ -59,24 +63,26 @@ class TreeSet implements Set, \IteratorAggregate
         return $this->map->size();
     }
 
-    public function union(Set $otherSet): TreeSet
+    #[\Override]
+    public function union(Set $other): TreeSet
     {
         $resultSet = new TreeSet();
         foreach ($this as $item) {
             $resultSet->add($item);
         }
-        foreach ($otherSet as $item) {
+        foreach ($other as $item) {
             $resultSet->add($item);
         }
 
         return $resultSet;
     }
 
-    public function intersection(Set $otherSet): TreeSet
+    #[\Override]
+    public function intersection(Set $other): TreeSet
     {
         $resultSet = new TreeSet();
         foreach ($this as $item) {
-            if ($otherSet->contains($item)) {
+            if ($other->contains($item)) {
                 $resultSet->add($item);
             }
         }
@@ -84,11 +90,12 @@ class TreeSet implements Set, \IteratorAggregate
         return $resultSet;
     }
 
-    public function difference(Set $otherSet): TreeSet
+    #[\Override]
+    public function difference(Set $other): TreeSet
     {
         $resultSet = new TreeSet();
         foreach ($this as $item) {
-            if (! $otherSet->contains($item)) {
+            if (! $other->contains($item)) {
                 $resultSet->add($item);
             }
         }
@@ -96,16 +103,24 @@ class TreeSet implements Set, \IteratorAggregate
         return $resultSet;
     }
 
+    #[\Override]
     public function find(mixed $element): mixed
     {
         return $this->contains($element) ? $element : null;
     }
 
+    /**
+     * @return \Traversable<int, mixed>
+     */
+    #[\Override]
     public function getIterator(): \Traversable
     {
         return new \ArrayIterator($this->map->keys());
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getItems(): array
     {
         $elements = [];

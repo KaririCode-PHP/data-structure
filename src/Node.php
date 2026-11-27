@@ -9,7 +9,7 @@ class Node
     public function __construct(
         public mixed $data,
         public ?Node $prev = null,
-        public ?Node $next = null
+        public ?Node $next = null,
     ) {
     }
 }

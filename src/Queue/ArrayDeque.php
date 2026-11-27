@@ -21,6 +21,7 @@ use KaririCode\Contract\DataStructure\Deque;
  */
 class ArrayDeque extends CircularArrayQueue implements Deque
 {
+    #[\Override]
     public function addFirst(mixed $element): void
     {
         $this->ensureCapacity();
@@ -29,6 +30,7 @@ class ArrayDeque extends CircularArrayQueue implements Deque
         ++$this->size;
     }
 
+    #[\Override]
     public function removeLast(): mixed
     {
         if ($this->isEmpty()) {
@@ -42,6 +44,7 @@ class ArrayDeque extends CircularArrayQueue implements Deque
         return $element;
     }
 
+    #[\Override]
     public function peekLast(): mixed
     {
         if ($this->isEmpty()) {
@@ -52,6 +55,7 @@ class ArrayDeque extends CircularArrayQueue implements Deque
         return $this->elements[$index];
     }
 
+    #[\Override]
     public function add(mixed $element): void
     {
         $this->addLast($element);

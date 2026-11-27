@@ -20,13 +20,21 @@ use KaririCode\Contract\DataStructure\Queue;
  */
 abstract class CircularArrayQueue implements Queue
 {
+    /** @var array<int, mixed> */
     protected array $elements;
+
     protected int $front = 0;
     protected int $size = 0;
     protected int $capacity;
 
+    /**
+     * @throws \InvalidArgumentException when $initialCapacity is below 1
+     */
     public function __construct(int $initialCapacity = 16)
     {
+        if ($initialCapacity < 1) {
+            throw new \InvalidArgumentException('The initial capacity must be at least 1.');
+        }
         $this->capacity = $initialCapacity;
         $this->elements = array_fill(0, $this->capacity, null);
     }
@@ -41,6 +49,7 @@ abstract class CircularArrayQueue implements Queue
         return $this->size;
     }
 
+    #[\Override]
     public function clear(): void
     {
         $this->elements = array_fill(0, $this->capacity, null);
@@ -62,11 +71,13 @@ abstract class CircularArrayQueue implements Queue
         }
     }
 
+    #[\Override]
     public function peek(): mixed
     {
         return $this->isEmpty() ? null : $this->elements[$this->front];
     }
 
+    #[\Override]
     public function dequeue(): mixed
     {
         if ($this->isEmpty()) {
@@ -80,6 +91,7 @@ abstract class CircularArrayQueue implements Queue
         return $element;
     }
 
+    #[\Override]
     public function enqueue(mixed $element): void
     {
         $this->ensureCapacity();
@@ -98,6 +110,9 @@ abstract class CircularArrayQueue implements Queue
         return $this->dequeue();
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getItems(): array
     {
         $items = [];
@@ -108,6 +123,7 @@ abstract class CircularArrayQueue implements Queue
         return $items;
     }
 
+    #[\Override]
     public function remove(mixed $element): bool
     {
         for ($i = 0; $i < $this->size; ++$i) {

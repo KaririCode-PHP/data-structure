@@ -14,10 +14,16 @@ use KaririCode\DataStructure\Tree\TreeMapNode;
  * This class implements a map using a self-balancing binary search tree (Red-Black Tree).
  * It provides O(log n) time complexity for put, get, and remove operations.
  *
+ * Keys are ordered with PHP's `<` and `>`: two keys neither of which is
+ * smaller than the other are the same key, for put() as for get(),
+ * containsKey() and remove().
+ *
  * @category  Maps
  *
  * @author    Walmir Silva <walmir.silva@kariricode.org>
  * @license   MIT
+ *
+ * @implements \IteratorAggregate<array-key, mixed>
  *
  * @see       https://kariricode.org/
  */
@@ -26,6 +32,7 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
     private ?TreeMapNode $root = null;
     private int $size = 0;
 
+    #[\Override]
     public function put(mixed $key, mixed $value): void
     {
         if (null === $this->root) {
@@ -45,11 +52,16 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         }
     }
 
+    #[\Override]
     public function get(mixed $key): mixed
     {
         return $this->findNode($key)?->value;
     }
 
+    /**
+     * @return list<mixed>
+     */
+    #[\Override]
     public function keys(): array
     {
         $keys = [];
@@ -58,6 +70,10 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         return $keys;
     }
 
+    /**
+     * @return list<mixed>
+     */
+    #[\Override]
     public function values(): array
     {
         $values = [];
@@ -66,6 +82,7 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         return $values;
     }
 
+    #[\Override]
     public function remove(mixed $key): bool
     {
         $node = $this->findNode($key);
@@ -78,22 +95,33 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         return true;
     }
 
+    #[\Override]
     public function size(): int
     {
         return $this->size;
     }
 
+    #[\Override]
     public function clear(): void
     {
         $this->root = null;
         $this->size = 0;
     }
 
+    #[\Override]
     public function containsKey(mixed $key): bool
     {
         return null !== $this->findNode($key);
     }
 
+    /**
+     * The entries in key order, as an array: keys convert to array keys as
+     * PHP converts them (a bool or a float to an int, null to "").
+     *
+     * @throws \TypeError when a key cannot be an array key (an array or an object)
+     *
+     * @return array<array-key, mixed>
+     */
     public function getItems(): array
     {
         $items = [];
@@ -102,11 +130,18 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         return $items;
     }
 
+    /**
+     * @return \Iterator<array-key, mixed>
+     */
+    #[\Override]
     public function getIterator(): \Iterator
     {
         return new \ArrayIterator($this->getItems());
     }
 
+    /**
+     * @param list<mixed> $keys
+     */
     private function inOrderTraversalKeys(?TreeMapNode $node, array &$keys): void
     {
         if (null !== $node) {
@@ -116,6 +151,9 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         }
     }
 
+    /**
+     * @param list<mixed> $values
+     */
     private function inOrderTraversalValues(?TreeMapNode $node, array &$values): void
     {
         if (null !== $node) {
@@ -125,36 +163,61 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         }
     }
 
+    /**
+     * @param array<array-key, mixed> $items
+     */
     private function inOrderTraversal(?TreeMapNode $node, array &$items): void
     {
         if (null !== $node) {
             $this->inOrderTraversal($node->left, $items);
-            $items[$node->key] = $node->value;
+            $items[$this->arrayKey($node->key)] = $node->value;
             $this->inOrderTraversal($node->right, $items);
         }
     }
 
+    private function arrayKey(mixed $key): int|string
+    {
+        return match (true) {
+            \is_int($key), \is_string($key) => $key,
+            \is_bool($key), \is_float($key) => (int) $key,
+            null === $key => '',
+            default => throw new \TypeError('A ' . get_debug_type($key) . ' key cannot be an array key.'),
+        };
+    }
+
+    /**
+     * -1 when $a orders before $b, 1 when after, 0 when they are the same key.
+     */
+    private function compareKeys(mixed $a, mixed $b): int
+    {
+        if ($a < $b) {
+            return -1;
+        }
+
+        return $a > $b ? 1 : 0;
+    }
+
     private function insertNode(TreeMapNode $root, mixed $key, mixed $value): ?TreeMapNode
     {
+        $parent = $root;
         $current = $root;
+        $order = 0;
         while (null !== $current) {
             $parent = $current;
-            if ($key < $current->key) {
-                $current = $current->left;
-            } elseif ($key > $current->key) {
-                $current = $current->right;
-            } else {
+            $order = $this->compareKeys($key, $current->key);
+            if (0 === $order) {
                 // Key already exists, just update the value and do not insert a new node.
                 $current->value = $value;
 
                 return null; // Return null to indicate that no node was inserted.
             }
+            $current = $order < 0 ? $current->left : $current->right;
         }
 
         $newNode = new TreeMapNode($key, $value);
         $newNode->parent = $parent;
 
-        if ($key < $parent->key) {
+        if ($order < 0) {
             $parent->left = $newNode;
         } else {
             $parent->right = $newNode;
@@ -165,59 +228,54 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
 
     private function balanceAfterInsertion(TreeMapNode $node): void
     {
-        while ($node !== $this->root && null !== $node->parent && $node->parent->isRed()) {
-            if ($node->parent === $node->parent->parent->left) {
-                $uncle = $node->parent->parent->right;
-                if (null !== $uncle && $uncle->isRed()) {
-                    $node->parent->setBlack();
-                    $uncle->setBlack();
-                    if (null !== $node->parent->parent) {
-                        $node->parent->parent->setRed();
-                        $node = $node->parent->parent;
-                    }
-                } else {
-                    if ($node === $node->parent->right) {
-                        $node = $node->parent;
-                        $this->rotateLeft($node);
-                    }
-                    if (null !== $node->parent) {
-                        $node->parent->setBlack();
-                        if (null !== $node->parent->parent) {
-                            $node->parent->parent->setRed();
-                            $this->rotateRight($node->parent->parent);
-                        }
-                    }
-                }
-            } else {
-                $uncle = $node->parent->parent->left;
-                if (null !== $uncle && $uncle->isRed()) {
-                    $node->parent->setBlack();
-                    $uncle->setBlack();
-                    if (null !== $node->parent->parent) {
-                        $node->parent->parent->setRed();
-                        $node = $node->parent->parent;
-                    }
-                } else {
-                    if ($node === $node->parent->left) {
-                        $node = $node->parent;
-                        $this->rotateRight($node);
-                    }
-                    if (null !== $node->parent) {
-                        $node->parent->setBlack();
-                        if (null !== $node->parent->parent) {
-                            $node->parent->parent->setRed();
-                            $this->rotateLeft($node->parent->parent);
-                        }
-                    }
-                }
+        $parent = $node->parent;
+        while (null !== $parent && $parent->isRed()) {
+            // A red node is never the root, so the grandparent exists.
+            $grandparent = $this->parentOf($parent);
+            $parentIsLeft = $parent === $grandparent->left;
+            $uncle = $parentIsLeft ? $grandparent->right : $grandparent->left;
+
+            if (null !== $uncle && $uncle->isRed()) {
+                $parent->setBlack();
+                $uncle->setBlack();
+                $grandparent->setRed();
+                $node = $grandparent;
+                $parent = $node->parent;
+
+                continue;
             }
+
+            if ($parentIsLeft && $node === $parent->right) {
+                $node = $parent;
+                $this->rotateLeft($node);
+                $parent = $this->parentOf($node);
+            } elseif (! $parentIsLeft && $node === $parent->left) {
+                $node = $parent;
+                $this->rotateRight($node);
+                $parent = $this->parentOf($node);
+            }
+
+            $parent->setBlack();
+            $grandparent->setRed();
+            $this->rotate($grandparent, ! $parentIsLeft);
+            $parent = $node->parent;
         }
         $this->root?->setBlack();
     }
 
+    private function rotate(TreeMapNode $node, bool $toTheLeft): void
+    {
+        if ($toTheLeft) {
+            $this->rotateLeft($node);
+
+            return;
+        }
+        $this->rotateRight($node);
+    }
+
     private function rotateLeft(TreeMapNode $node): void
     {
-        $rightChild = $node->right;
+        $rightChild = $node->right ?? throw new \LogicException('A left rotation needs a right child.');
         $node->setRight($rightChild->left);
 
         $rightChild->parent = $node->parent;
@@ -234,7 +292,7 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
 
     private function rotateRight(TreeMapNode $node): void
     {
-        $leftChild = $node->left;
+        $leftChild = $node->left ?? throw new \LogicException('A right rotation needs a left child.');
         $node->setLeft($leftChild->right);
 
         $leftChild->parent = $node->parent;
@@ -253,75 +311,54 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
     {
         $current = $this->root;
         while (null !== $current) {
-            if ($key === $current->key) {
+            $order = $this->compareKeys($key, $current->key);
+            if (0 === $order) {
                 return $current;
             }
-            $current = $key < $current->key ? $current->left : $current->right;
+            $current = $order < 0 ? $current->left : $current->right;
         }
 
         return null;
     }
 
+    /**
+     * Removes $node from the tree (Cormen et al., RB-DELETE), with null for
+     * the leaves: $child takes the place of the node that leaves its
+     * position, and $childParent is where it hangs, so the fix-up can climb
+     * from there when $child is null.
+     */
     private function deleteNode(TreeMapNode $node): void
     {
-        $replacementNode = $this->getReplacementNode($node);
-        $needsBalancing = $node->isBlack() && (null === $replacementNode || $replacementNode->isBlack());
-
-        if (null === $replacementNode) {
-            if ($node === $this->root) {
-                $this->root = null;
-            } else {
-                if ($needsBalancing) {
-                    $this->balanceBeforeRemoval($node);
-                }
-                $node->removeFromParent();
-            }
-
-            return;
-        }
+        $removedColor = $node->color;
 
         if (null === $node->left || null === $node->right) {
-            if ($node === $this->root) {
-                $this->root = $replacementNode;
-                $replacementNode->setBlack();
-                $replacementNode->parent = null;
-            } else {
-                $node->replaceWith($replacementNode);
-                if ($needsBalancing) {
-                    $this->balanceBeforeRemoval($replacementNode);
-                }
-            }
-
-            return;
-        }
-
-        $successor = $this->minimum($node->right);
-        $originalColor = $successor->isBlack();
-        $node->key = $successor->key;
-        $node->value = $successor->value;
-        $replacementNode = $successor->right;
-
-        if ($successor->parent === $node) {
-            if (null !== $replacementNode) {
-                $replacementNode->parent = $successor;
-            }
+            $child = $node->left ?? $node->right;
+            $childParent = $node->parent;
+            $this->transplant($node, $child);
         } else {
-            $this->transplant($successor, $successor->right);
-            $successor->right = $node->right;
-            if (null !== $successor->right) {
-                $successor->right->parent = $successor;
+            $successor = $this->minimum($node->right);
+            $removedColor = $successor->color;
+            $child = $successor->right;
+
+            if ($successor->parent === $node) {
+                $childParent = $successor;
+            } else {
+                $childParent = $successor->parent;
+                $this->transplant($successor, $successor->right);
+                $successor->setRight($node->right);
             }
+
+            $this->transplant($node, $successor);
+            $successor->setLeft($node->left);
+            $successor->color = $node->color;
         }
 
-        $this->transplant($node, $successor);
-        $successor->left = $node->left;
-        if (null !== $successor->left) {
-            $successor->left->parent = $successor;
-        }
-        $successor->color = $node->color;
+        $node->left = null;
+        $node->right = null;
+        $node->parent = null;
 
-        if (TreeMapNode::BLACK === $originalColor && null !== $replacementNode) {
-            $this->balanceBeforeRemoval($replacementNode);
+        if (TreeMapNode::BLACK === $removedColor) {
+            $this->balanceAfterRemoval($child, $childParent);
         }
     }
 
@@ -339,92 +376,68 @@ class TreeMap implements Map, IterableCollection, \IteratorAggregate
         }
     }
 
-    private function getReplacementNode(TreeMapNode $node): ?TreeMapNode
+    /**
+     * RB-DELETE-FIXUP: $node carries an extra black, and a null $node is a
+     * black leaf under $parent. The sibling of a doubly black position is
+     * never null, since its side of the tree holds at least one black node.
+     */
+    private function balanceAfterRemoval(?TreeMapNode $node, ?TreeMapNode $parent): void
     {
-        if (null !== $node->left && null !== $node->right) {
-            return $this->minimum($node->right);
-        }
+        while (null !== $parent && $node !== $this->root && $this->isBlack($node)) {
+            $isLeft = $node === $parent->left;
+            $sibling = $this->siblingOf($parent, $isLeft);
 
-        return $node->left ?? $node->right;
+            if ($sibling->isRed()) {
+                $sibling->setBlack();
+                $parent->setRed();
+                $this->rotate($parent, $isLeft);
+                $sibling = $this->siblingOf($parent, $isLeft);
+            }
+
+            $near = $isLeft ? $sibling->left : $sibling->right;
+            $far = $isLeft ? $sibling->right : $sibling->left;
+
+            if ($this->isBlack($near) && $this->isBlack($far)) {
+                $sibling->setRed();
+                $node = $parent;
+                $parent = $node->parent;
+
+                continue;
+            }
+
+            if ($this->isBlack($far)) {
+                $near?->setBlack();
+                $sibling->setRed();
+                $this->rotate($sibling, ! $isLeft);
+                $sibling = $this->siblingOf($parent, $isLeft);
+                $far = $isLeft ? $sibling->right : $sibling->left;
+            }
+
+            $sibling->color = $parent->color;
+            $parent->setBlack();
+            $far?->setBlack();
+            $this->rotate($parent, $isLeft);
+            $node = $this->root;
+            $parent = null;
+        }
+        $node?->setBlack();
     }
 
-    private function balanceBeforeRemoval(TreeMapNode $node): void
+    private function isBlack(?TreeMapNode $node): bool
     {
-        while ($node !== $this->root && $node->isBlack()) {
-            if (null === $node->parent) {
-                break;
-            }
-            if ($node === $node->parent->left) {
-                $sibling = $node->parent->right;
-                if (null !== $sibling && $sibling->isRed()) {
-                    $sibling->setBlack();
-                    $node->parent->setRed();
-                    $this->rotateLeft($node->parent);
-                    $sibling = $node->parent->right;
-                }
-                if (null === $sibling
-                    || (null === $sibling->left || $sibling->left->isBlack())
-                    && (null === $sibling->right || $sibling->right->isBlack())) {
-                    if (null !== $sibling) {
-                        $sibling->setRed();
-                    }
-                    $node = $node->parent;
-                } else {
-                    if (null === $sibling->right || $sibling->right->isBlack()) {
-                        if (null !== $sibling->left) {
-                            $sibling->left->setBlack();
-                        }
-                        $sibling->setRed();
-                        $this->rotateRight($sibling);
-                        $sibling = $node->parent->right;
-                    }
-                    if (null !== $sibling) {
-                        $sibling->color = $node->parent->color;
-                        $node->parent->setBlack();
-                        if (null !== $sibling->right) {
-                            $sibling->right->setBlack();
-                        }
-                        $this->rotateLeft($node->parent);
-                    }
-                    $node = $this->root;
-                }
-            } else {
-                $sibling = $node->parent->left;
-                if (null !== $sibling && $sibling->isRed()) {
-                    $sibling->setBlack();
-                    $node->parent->setRed();
-                    $this->rotateRight($node->parent);
-                    $sibling = $node->parent->left;
-                }
-                if (null === $sibling
-                    || (null === $sibling->right || $sibling->right->isBlack())
-                    && (null === $sibling->left || $sibling->left->isBlack())) {
-                    if (null !== $sibling) {
-                        $sibling->setRed();
-                    }
-                    $node = $node->parent;
-                } else {
-                    if (null === $sibling->left || $sibling->left->isBlack()) {
-                        if (null !== $sibling->right) {
-                            $sibling->right->setBlack();
-                        }
-                        $sibling->setRed();
-                        $this->rotateLeft($sibling);
-                        $sibling = $node->parent->left;
-                    }
-                    if (null !== $sibling) {
-                        $sibling->color = $node->parent->color;
-                        $node->parent->setBlack();
-                        if (null !== $sibling->left) {
-                            $sibling->left->setBlack();
-                        }
-                        $this->rotateRight($node->parent);
-                    }
-                    $node = $this->root;
-                }
-            }
-        }
-        $node->setBlack();
+        return null === $node || $node->isBlack();
+    }
+
+    private function parentOf(TreeMapNode $node): TreeMapNode
+    {
+        return $node->parent ?? throw new \LogicException('Red-black invariant broken: a red node without a parent.');
+    }
+
+    private function siblingOf(TreeMapNode $parent, bool $ofLeftChild): TreeMapNode
+    {
+        $sibling = $ofLeftChild ? $parent->right : $parent->left;
+
+        return $sibling ?? throw new \LogicException('Red-black invariant broken: a doubly black node without a sibling.');
     }
 
     private function minimum(TreeMapNode $node): TreeMapNode
