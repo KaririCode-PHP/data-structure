@@ -109,13 +109,31 @@ echo $deque->peekLast(); // Saída: Último
 $deque->removeLast();    // Remove "Último"
 ```
 
-## Testes
+## Desenvolvimento
 
-Para rodar os testes do componente **KaririCode DataStructure**, execute o seguinte comando:
+Este pacote não mantém ferramentas de QA no `require-dev`. O [KaririCode Devkit](https://github.com/KaririCode-PHP/devkit) (`kcode`) instala PHPUnit, PHPStan, Psalm, PHP-CS-Fixer e Rector em `.kcode/` (ignorado pelo git) na primeira vez que um comando precisa deles.
+
+Instale o `kcode` uma vez (PHP 8.4+):
 
 ```bash
-make test
+wget https://github.com/KaririCode-PHP/devkit/releases/latest/download/kcode.phar
+chmod +x kcode.phar
+sudo mv kcode.phar /usr/local/bin/kcode
 ```
+
+Na raiz do repositório:
+
+```bash
+composer install          # só as dependências de runtime
+kcode init                # gera .kcode/ e instala o toolchain (primeira vez)
+kcode test                # PHPUnit (--coverage, --suite=Unit, qualquer opção do PHPUnit)
+kcode analyse             # PHPStan e depois Psalm
+kcode cs:fix              # aplica o estilo de código (--check só relata)
+kcode quality             # o gate do CI: cs-fixer, PHPStan, Psalm, PHPUnit
+kcode quality --docker    # o mesmo gate dentro do container PHP do kcode
+```
+
+Ajustes do projeto ficam em `devkit.php` (`kcode init --config` gera um modelo); rode `kcode init` depois de editá-lo. `kcode clean --all` remove `.kcode/`.
 
 ## Licença
 
