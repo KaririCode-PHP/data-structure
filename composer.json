@@ -45,12 +45,12 @@
   },
   "extra": {
     "branch-alias": {
-      "dev-main": "1.0.x-dev"
+      "dev-main": "1.2.x-dev"
     }
   },
   "support": {
-    "issues": "https://github.com/KaririCode-Framework/kariricode-data-structure/issues",
-    "source": "https://github.com/KaririCode-Framework/kariricode-data-structure"
+    "issues": "https://github.com/KaririCode-PHP/data-structure/issues",
+    "source": "https://github.com/KaririCode-PHP/data-structure"
   },
   "config": {
     "allow-plugins": {
