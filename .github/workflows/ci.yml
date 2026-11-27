@@ -1,0 +1,58 @@
+name: CI
+
+# Quality gate through KaririCode Devkit (kcode). The toolchain is not in
+# require-dev: kcode installs it into .kcode/ and runs cs-fixer, PHPStan,
+# Psalm and PHPUnit.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality (kcode)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate
+
+      - name: Install runtime dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
+      - name: Install kcode
+        run: |
+          wget -q https://github.com/KaririCode-PHP/devkit/releases/latest/download/kcode.phar
+          chmod +x kcode.phar
+          sudo mv kcode.phar /usr/local/bin/kcode
+
+      - name: Generate .kcode/ and install the toolchain
+        run: kcode init
+
+      - name: cs-fixer, PHPStan, Psalm, PHPUnit
+        run: kcode quality
+
+      - name: Security audit
+        if: always()
+        # Composer exits 1 when there is nothing to audit.
+        run: |
+          if jq -e '(.packages + ."packages-dev") | length > 0' composer.lock > /dev/null; then
+            composer audit --format=plain
+          else
+            echo "composer.lock has no packages, so there is nothing to audit."
+          fi
