@@ -2,7 +2,8 @@ name: CI
 
 # Quality gate through KaririCode Devkit (kcode). The toolchain is not in
 # require-dev: kcode installs it into .kcode/ and runs cs-fixer, PHPStan,
-# Psalm and PHPUnit.
+# Psalm and PHPUnit. Actions are pinned by commit SHA, with the release they
+# resolve to in a comment; kcode is pinned by version and SHA-256.
 
 on:
   push:
@@ -14,15 +15,19 @@ on:
 permissions:
   contents: read
 
+env:
+  KCODE_VERSION: 1.2.2
+  KCODE_SHA256: 11b889f49c9d11445dabac3ac8c725819cd5e33d30eee609db49691746423487
+
 jobs:
   quality:
     name: Quality (kcode)
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: '8.4'
           extensions: mbstring, xml
@@ -35,11 +40,11 @@ jobs:
       - name: Install runtime dependencies
         run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
-      - name: Install kcode
+      - name: Install kcode ${{ env.KCODE_VERSION }}, checksum verified
         run: |
-          wget -q https://github.com/KaririCode-PHP/devkit/releases/latest/download/kcode.phar
-          chmod +x kcode.phar
-          sudo mv kcode.phar /usr/local/bin/kcode
+          curl -fsSLo kcode.phar "https://github.com/KaririCode-PHP/devkit/releases/download/v${KCODE_VERSION}/kcode.phar"
+          echo "${KCODE_SHA256}  kcode.phar" | sha256sum -c -
+          sudo install -m 0755 kcode.phar /usr/local/bin/kcode
 
       - name: Generate .kcode/ and install the toolchain
         run: kcode init
