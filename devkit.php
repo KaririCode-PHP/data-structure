@@ -10,6 +10,9 @@ declare(strict_types=1);
  */
 
 return [
+    // ── No src/Contract here: nothing to exclude from static analysis ──
+    'exclude_dirs' => [],
+
     // ── Toolchain extras (installed into .kcode/vendor/) ───────
     'tools' => [
         'mockery/mockery' => '^1.6',
