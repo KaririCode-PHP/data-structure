@@ -61,3 +61,6 @@ tmp/
 .vscode/extensions.json
 lista_de_arquivos.txt
 tests/lista_de_arquivos.php
+
+# KaririCode Devkit (generated, see devkit.php)
+/.kcode/
