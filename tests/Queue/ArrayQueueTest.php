@@ -190,4 +190,25 @@ final class ArrayQueueTest extends TestCase
         $queue->enqueue(3);
         $this->assertSame([1, 2, 3], $queue->getItems());
     }
+
+    // A capacity of 0 used to fail on the first enqueue with a division by
+    // zero; it is refused when the queue is built.
+    public function testAnInitialCapacityBelowOneIsRefused(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The initial capacity must be at least 1.');
+
+        new ArrayQueue(0);
+    }
+
+    public function testAQueueBuiltWithCapacityOneGrows(): void
+    {
+        $queue = new ArrayQueue(1);
+        $queue->enqueue('a');
+        $queue->enqueue('b');
+        $queue->enqueue('c');
+
+        $this->assertSame(['a', 'b', 'c'], $queue->getItems());
+        $this->assertSame('a', $queue->dequeue());
+    }
 }

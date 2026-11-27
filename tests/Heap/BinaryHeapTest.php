@@ -152,9 +152,9 @@ final class BinaryHeapTest extends TestCase
 
     public function testComparableElements(): void
     {
-        $element1 = $this->createMock(Comparable::class);
-        $element2 = $this->createMock(Comparable::class);
-        $element3 = $this->createMock(Comparable::class);
+        $element1 = $this->createStub(Comparable::class);
+        $element2 = $this->createStub(Comparable::class);
+        $element3 = $this->createStub(Comparable::class);
 
         $element1->method('compareTo')->willReturn(1);
         $element2->method('compareTo')->willReturn(0);
@@ -190,8 +190,8 @@ final class BinaryHeapTest extends TestCase
     {
         $heap = new BinaryHeap('min');
 
-        $element1 = $this->createMock(Comparable::class);
-        $element2 = $this->createMock(Comparable::class);
+        $element1 = $this->createStub(Comparable::class);
+        $element2 = $this->createStub(Comparable::class);
 
         $element1->method('compareTo')->willReturn(1);
         $element2->method('compareTo')->willReturn(-1);
@@ -211,8 +211,8 @@ final class BinaryHeapTest extends TestCase
     {
         $heap = new BinaryHeap('max');
 
-        $element1 = $this->createMock(Comparable::class);
-        $element2 = $this->createMock(Comparable::class);
+        $element1 = $this->createStub(Comparable::class);
+        $element2 = $this->createStub(Comparable::class);
 
         $element1->method('compareTo')->willReturn(1);
         $element2->method('compareTo')->willReturn(-1);

@@ -129,7 +129,7 @@ class IteratorBenchmark
                 "  Memory: %.2f KB\n\n",
                 $name,
                 $result['time'],
-                $result['memory'] / 1024
+                $result['memory'] / 1024,
             );
         }
 
@@ -145,7 +145,7 @@ class IteratorBenchmark
                 $name,
                 $timeRatio,
                 $memoryRatio,
-                $fastest
+                $fastest,
             );
         }
     }

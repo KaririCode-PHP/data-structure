@@ -275,4 +275,16 @@ final class LinkedListTest extends TestCase
 
         $this->assertSame([5], $list->getItems());
     }
+
+    // get() and set() take the parameter names of the contract's Indexable,
+    // so named arguments written against the interface work.
+    public function testGetAndSetAcceptTheContractParameterNames(): void
+    {
+        $list = new LinkedList();
+        $list->add('a');
+
+        $list->set(index: 0, element: 'b');
+
+        $this->assertSame('b', $list->get(index: 0));
+    }
 }

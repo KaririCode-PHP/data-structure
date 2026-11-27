@@ -195,13 +195,13 @@ final class TreeMapTest extends TestCase
         $this->treeMap->remove(7);
 
         $expectedStructure = <<<TREE
-    ├── 5:five [BLACK]
-    │   ├── 3:three [BLACK]
-    │   │   ├── 1:one [RED]
-    │   └── 8:eight [BLACK]
-    │       ├── 6:six [RED]
+            ├── 5:five [BLACK]
+            │   ├── 3:three [BLACK]
+            │   │   ├── 1:one [RED]
+            │   └── 8:eight [BLACK]
+            │       ├── 6:six [RED]
 
-    TREE;
+            TREE;
 
         $this->assertEquals($expectedStructure, $this->getTreeStructure());
     }
@@ -242,7 +242,7 @@ final class TreeMapTest extends TestCase
         }
 
         shuffle($data);
-        $halfData = array_slice($data, 0, 500);
+        $halfData = \array_slice($data, 0, 500);
 
         foreach ($halfData as $key) {
             $this->assertTrue($this->treeMap->remove($key));
@@ -251,7 +251,7 @@ final class TreeMapTest extends TestCase
         $this->assertEquals(500, $this->countNodes());
 
         foreach ($data as $key) {
-            if (in_array($key, $halfData)) {
+            if (\in_array($key, $halfData)) {
                 $this->assertNull($this->treeMap->get($key));
             } else {
                 $this->assertEquals("value_$key", $this->treeMap->get($key));
@@ -281,27 +281,95 @@ final class TreeMapTest extends TestCase
         $this->assertNull($v->parent);
     }
 
-    // Test balance before removal break condition.
-    public function testBalanceBeforeRemovalBreakCondition(): void
+    // The red-black rules hold after every insertion and removal, against a
+    // plain array as the reference for the contents.
+    public function testRedBlackRulesHoldAfterRandomInsertionsAndRemovals(): void
     {
-        $this->treeMap->put(10, 'ten');
-        $this->treeMap->put(5, 'five');
+        mt_srand(20261127);
+        $reference = [];
 
-        $reflection = new \ReflectionClass(TreeMap::class);
-        $rootProperty = $reflection->getProperty('root');
-        $rootProperty->setAccessible(true);
+        for ($step = 0; $step < 4000; ++$step) {
+            $key = mt_rand(0, 150);
+            if (mt_rand(0, 2) > 0) {
+                $this->treeMap->put($key, 'v' . $step);
+                $reference[$key] = 'v' . $step;
+            } else {
+                $this->assertSame(\array_key_exists($key, $reference), $this->treeMap->remove($key));
+                unset($reference[$key]);
+            }
 
-        $root = $rootProperty->getValue($this->treeMap);
+            $this->assertRedBlackTree();
+            $this->assertSame(\count($reference), $this->treeMap->size());
+        }
 
-        $node = $root->left;
-        $node->setBlack();
-        $node->parent = null;
+        ksort($reference);
+        $this->assertSame($reference, $this->treeMap->getItems());
+    }
 
-        $balanceBeforeRemovalMethod = $reflection->getMethod('balanceBeforeRemoval');
-        $balanceBeforeRemovalMethod->setAccessible(true);
-        $balanceBeforeRemovalMethod->invoke($this->treeMap, $node);
+    // Removing a node with two children whose successor is black moves a
+    // black node off the successor's path: its red child turns black.
+    public function testRemovingANodeWhoseSuccessorIsBlackRebalances(): void
+    {
+        foreach ([1, 2, 3, 4] as $key) {
+            $this->treeMap->put($key, (string) $key);
+        }
 
-        $this->assertTrue(true);
+        $this->assertTrue($this->treeMap->remove(2));
+
+        $this->assertRedBlackTree();
+        $this->assertSame([1, 3, 4], $this->treeMap->keys());
+        $this->assertSame(3, $this->getRootNode()?->key);
+    }
+
+    // Removing a black node with one red child recolours the child, which
+    // keeps the black height of that path.
+    public function testRemovingABlackNodeWithOneChildRecoloursTheChild(): void
+    {
+        foreach ([20, 10, 30, 25] as $key) {
+            $this->treeMap->put($key, (string) $key);
+        }
+
+        $this->assertTrue($this->treeMap->remove(30));
+
+        $this->assertRedBlackTree();
+        $this->assertSame([10, 20, 25], $this->treeMap->keys());
+    }
+
+    // Keys that neither order before nor after each other are one key, for
+    // every operation, as put() already treated them.
+    public function testKeysThatCompareEqualAreTheSameKeyForEveryOperation(): void
+    {
+        $this->treeMap->put(1, 'int');
+        $this->treeMap->put(1.0, 'float');
+
+        $this->assertSame(1, $this->treeMap->size());
+        $this->assertSame('float', $this->treeMap->get(1.0));
+        $this->assertTrue($this->treeMap->containsKey('1'));
+        $this->assertTrue($this->treeMap->remove(1.0));
+        $this->assertSame(0, $this->treeMap->size());
+    }
+
+    public function testGetItemsRejectsAKeyThatCannotBeAnArrayKey(): void
+    {
+        $this->treeMap->put(new \stdClass(), 'object');
+
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage('A stdClass key cannot be an array key.');
+
+        $this->treeMap->getItems();
+    }
+
+    public function testGetItemsConvertsScalarKeysAsArraysDo(): void
+    {
+        $this->treeMap->put(null, 'null');
+        $this->treeMap->put(2.0, 'float');
+        $this->treeMap->put('7', 'numeric string');
+
+        $this->assertSame(['' => 'null', 2 => 'float', 7 => 'numeric string'], $this->treeMap->getItems());
+
+        $booleans = new TreeMap();
+        $booleans->put(true, 'bool');
+        $this->assertSame([1 => 'bool'], $booleans->getItems());
     }
 
     // Test deleting the root node with a single child.
@@ -393,6 +461,51 @@ final class TreeMapTest extends TestCase
         ];
 
         $this->assertSame($expectedItems, $items);
+    }
+
+    // Checks the red-black rules, the parent links and the key order.
+    private function assertRedBlackTree(): void
+    {
+        $root = $this->getRootNode();
+        if (null === $root) {
+            $this->assertSame(0, $this->treeMap->size());
+
+            return;
+        }
+
+        $this->assertTrue($root->isBlack(), 'The root is black.');
+        $this->assertNull($root->parent, 'The root has no parent.');
+        $this->assertSame($this->treeMap->size(), $this->countNodes());
+        $this->blackHeight($root, null, null);
+    }
+
+    private function blackHeight(?TreeMapNode $node, mixed $lower, mixed $upper): int
+    {
+        if (null === $node) {
+            return 1;
+        }
+
+        if (null !== $lower) {
+            $this->assertGreaterThan($lower, $node->key, 'Keys are in order.');
+        }
+        if (null !== $upper) {
+            $this->assertLessThan($upper, $node->key, 'Keys are in order.');
+        }
+
+        foreach ([$node->left, $node->right] as $child) {
+            if (null !== $child) {
+                $this->assertSame($node, $child->parent, 'A child points to its parent.');
+                if ($node->isRed()) {
+                    $this->assertTrue($child->isBlack(), 'A red node has black children.');
+                }
+            }
+        }
+
+        $left = $this->blackHeight($node->left, $lower, $node->key);
+        $right = $this->blackHeight($node->right, $node->key, $upper);
+        $this->assertSame($left, $right, 'Every path has the same number of black nodes.');
+
+        return $left + ($node->isBlack() ? 1 : 0);
     }
 
     // Helper method to get the root node of the tree.

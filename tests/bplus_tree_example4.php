@@ -164,7 +164,7 @@ class BPlusTree
 
         $this->removeFromNode(
             $node->children[$flag && $idx > $node->keyCount ? $idx - 1 : $idx],
-            $key
+            $key,
         );
     }
 

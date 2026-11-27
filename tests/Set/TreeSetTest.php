@@ -192,4 +192,18 @@ final class TreeSetTest extends TestCase
         $this->assertSame(1, $this->set->find(1));
         $this->assertNull($this->set->find(3)); // Non-existing element
     }
+
+    // The set operations take the contract's parameter name.
+    public function testSetOperationsAcceptTheContractParameterName(): void
+    {
+        $this->set->add(1);
+        $this->set->add(2);
+        $other = new TreeSet();
+        $other->add(2);
+        $other->add(3);
+
+        $this->assertSame([1, 2, 3], $this->set->union(other: $other)->getItems());
+        $this->assertSame([2], $this->set->intersection(other: $other)->getItems());
+        $this->assertSame([1], $this->set->difference(other: $other)->getItems());
+    }
 }
